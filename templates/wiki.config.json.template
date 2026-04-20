@@ -1,0 +1,81 @@
+{
+  "_comment": "LLM Wiki 프로젝트 설정. 이 파일을 프로젝트 루트에 wiki.config.json으로 복사 후 수정.",
+  "version": "1.0",
+
+  "project_id": "<agent-name>",
+  "mode": "session-extract",
+  "_mode_options": ["karpathy-pure", "session-extract", "hybrid"],
+
+  "paths": {
+    "wiki_root": "docs/wiki",
+    "raw_root": "raw",
+    "session_archive_root": "docs/session_archive",
+    "sessions_jsonl": "~/.claude/projects/<agent-uuid>/*.jsonl",
+    "_note": "sessions_jsonl: ~/.claude/projects/ 하위에서 project UUID 디렉토리 찾기. 또는 claude project list로 확인."
+  },
+
+  "sections": [
+    {
+      "name": "decisions",
+      "template": "decision",
+      "phase_tag": null,
+      "_note": "ADR 스타일 기술 결정. YAML frontmatter + status 필드 권장."
+    },
+    {
+      "name": "concepts",
+      "template": "concept",
+      "phase_tag": null,
+      "_note": "개념 정의 엔티티. 재사용 단위."
+    },
+    {
+      "name": "principles",
+      "template": "principle",
+      "phase_tag": null,
+      "_note": "일반화 원리. 여러 postmortem/실험 교훈에서 추출."
+    }
+  ],
+
+  "_sections_extended_example": [
+    {"name": "ideas",       "template": "idea",       "phase_tag": "P1"},
+    {"name": "postmortems", "template": "postmortem", "phase_tag": "P5"},
+    {"name": "architecture","template": "entity",     "phase_tag": null},
+    {"name": "pipeline",    "template": "entity",     "phase_tag": null},
+    {"name": "reference",   "template": "entity",     "phase_tag": null}
+  ],
+
+  "auditors": [],
+  "_auditors_example": [
+    {
+      "name": "reality-auditor",
+      "model": "opus",
+      "trigger": "postmortem-ingest",
+      "description": "결과 해석 확증편향 탐지 + 대안 설명 요구"
+    }
+  ],
+
+  "frontmatter": {
+    "required_fields": ["date", "status"],
+    "optional_fields": ["phase", "scope", "project", "tags"],
+    "status_values": ["Draft", "Active", "Implemented", "Superseded", "Archived"]
+  },
+
+  "lint_cadence": {
+    "every_sessions": 5,
+    "every_pages": 10,
+    "_note": "세션 카운트는 session-lifecycle 종료 훅에서 별도 관리 필요."
+  },
+
+  "obsidian": {
+    "vault_path": ".",
+    "dataview_enabled": true,
+    "graph_exclude_patterns": ["docs/session_archive"],
+    "_note": "vault_path는 project_root 기준 상대경로."
+  },
+
+  "naming_conventions": {
+    "session_based": "YYYYMMDD_<name>.md",
+    "entity": "<name>.md",
+    "decision_adr": "YYYY-MM-DD_<kebab-topic>.md",
+    "versioned": "YYYYMMDD_<name>_v<n>.md"
+  }
+}

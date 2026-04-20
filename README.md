@@ -1,0 +1,72 @@
+# TWK — TriadWiKi
+
+**Claude Code Skill Plugin** — Karpathy LLM Wiki 방법론의 Triad Chord Studio 전용 구현체 (구 `llm-wiki`).
+
+3-Layer (Raw / Wiki / Schema) + 3 Operations (Ingest / Query / Lint) + **Compilation > RAG** 원칙.
+
+## Install
+
+글로벌 Claude Code 스킬로 설치:
+
+```bash
+# Option A: clone
+git clone https://github.com/bobpullie/TWK.git "$HOME/.claude/skills/TWK"
+
+# Option B: copy (Windows)
+git clone https://github.com/bobpullie/TWK.git %USERPROFILE%\.claude\skills\TWK
+```
+
+설치 후 Claude Code에서 `Skill` 도구로 `TWK` 호출 가능.
+
+## Structure
+
+```
+TWK/
+├── SKILL.md              # Skill 진입점 (name: TWK)
+├── scripts/
+│   ├── extract_session_raw.py   # L2 세션 raw 추출 (Mode B)
+│   ├── init_wiki.py             # 프로젝트별 wiki.config.json + 섹션 생성
+│   └── lint.py                  # orphan/dangling/stale/frontmatter 검사
+├── templates/
+│   ├── page-templates/          # decision/concept/principle/postmortem/entity
+│   ├── rule-snippets/
+│   ├── schema/
+│   └── wiki.config.json.template
+└── references/
+    ├── 3-layer-architecture.md
+    └── operations.md
+```
+
+## 프로젝트 적용
+
+각 에이전트 프로젝트 루트에 `wiki.config.json` 작성 (템플릿 참조):
+
+```bash
+cd <AGENT_PROJECT>
+python ~/.claude/skills/TWK/scripts/init_wiki.py --mode B  # Mode A=Pure, B=Session-Extract
+```
+
+출력: `docs/wiki/{decisions,patterns,concepts,postmortems,principles}/` + `index.md` + `log.md`.
+
+## Dependencies
+
+- Python ≥ 3.10
+- (Optional) `qmd` CLI — wiki BM25/dense 검색 시. 미설치 시 lint/extract는 정상 동작, 검색만 제한.
+
+## Naming History
+
+- v0: `llm-wiki` — 2026-04-20 S34 위상군 자체 제작 (범용 Karpathy 구현)
+- v1: **TWK (TriadWiKi)** — 2026-04-20 S35 fork 브랜드 공식화, 본 레포 분리
+
+## Related Plugins
+
+| 플러그인 | 역할 | 레포 |
+|---------|------|------|
+| **TEMS** | Topological Evolving Memory System (hook) | https://github.com/bobpullie/TEMS |
+| **SDC** | Subagent Delegation Contract (skill) | https://github.com/bobpullie/SDC |
+| **DVC** | Deterministic Verification Checklist (skill) | https://github.com/bobpullie/DVC |
+| **TWK** (this) | LLM Wiki 3-Layer 방법론 (skill) | https://github.com/bobpullie/TWK |
+
+## License
+
+MIT — see [LICENSE](LICENSE).
