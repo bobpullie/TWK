@@ -1,6 +1,6 @@
 {
   "_comment": "LLM Wiki 프로젝트 설정. 이 파일을 프로젝트 루트에 wiki.config.json으로 복사 후 수정.",
-  "version": "1.0",
+  "version": "1.1",
 
   "project_id": "<agent-name>",
   "mode": "session-extract",
@@ -54,9 +54,14 @@
   ],
 
   "frontmatter": {
+    "_schema_contract": "Dataview + Calendar 호환 통일 스키마. date 는 반드시 인용 없이 ISO YYYY-MM-DD.",
     "required_fields": ["date", "status"],
-    "optional_fields": ["phase", "scope", "project", "tags"],
-    "status_values": ["Draft", "Active", "Implemented", "Superseded", "Archived"]
+    "optional_fields": ["aliases", "phase", "scope", "project", "tags", "cssclass"],
+    "status_values": ["Draft", "Active", "Accepted", "Implemented", "Superseded", "Archived"],
+    "date_format": "YYYY-MM-DD",
+    "date_quoted": false,
+    "tags_key": "tags",
+    "tags_style": "flow"
   },
 
   "lint_cadence": {
@@ -69,13 +74,33 @@
     "vault_path": ".",
     "dataview_enabled": true,
     "graph_exclude_patterns": ["docs/session_archive"],
-    "_note": "vault_path는 project_root 기준 상대경로."
+    "_note": "vault_path는 project_root 기준 상대경로.",
+    "daily_notes": {
+      "enabled": true,
+      "folder": "docs/daily",
+      "format": "YYYY-MM-DD",
+      "template_path": "docs/templates/daily-note.md",
+      "_calendar_plugin_note": "Calendar plugin (liamcain) 은 Daily Notes 플러그인의 format 을 그대로 사용. 반드시 frontmatter date 포맷과 동일한 YYYY-MM-DD 로 유지.",
+      "_integration_pattern": "각 wiki 페이지의 frontmatter date 와 daily-note 파일명이 일치하면, Daily Note 내 Dataview 쿼리 (`WHERE date = this.file.day`) 가 자동 수집."
+    },
+    "cssclasses": {
+      "_note": "각 템플릿이 부여하는 cssclass 값. Obsidian CSS snippets 에서 .twk-* 셀렉터로 스타일 지정 가능.",
+      "decision": "twk-decision",
+      "concept": "twk-concept",
+      "principle": "twk-principle",
+      "postmortem": "twk-postmortem",
+      "idea": "twk-idea",
+      "entity": "twk-entity",
+      "daily": "twk-daily"
+    }
   },
 
   "naming_conventions": {
     "session_based": "YYYYMMDD_<name>.md",
     "entity": "<name>.md",
     "decision_adr": "YYYY-MM-DD_<kebab-topic>.md",
-    "versioned": "YYYYMMDD_<name>_v<n>.md"
+    "versioned": "YYYYMMDD_<name>_v<n>.md",
+    "daily_note": "YYYY-MM-DD.md",
+    "_daily_note_note": "Calendar plugin 은 이 포맷의 파일명만 dot 으로 인식. frontmatter date 와 반드시 일치."
   }
 }

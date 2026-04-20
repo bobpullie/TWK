@@ -24,6 +24,11 @@ from typing import NamedTuple
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+?)(?:[|#][^\]]*?)?\]\]")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
+# Dataview/Calendar 호환 검증용 정규식
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ISO_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?")
+QUOTED_RE = re.compile(r'^[\'"].*[\'"]$')
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -89,14 +94,31 @@ def extract_wikilinks(text: str) -> list[str]:
 
 
 def parse_frontmatter(text: str) -> dict:
+    """Values 에서 따옴표를 제거한 표준 dict 반환 (검증 완료 후 조회용).
+
+    원문 그대로(quote 포함)가 필요하면 parse_frontmatter_raw 사용.
+    """
     m = FRONTMATTER_RE.match(text)
     if not m:
         return {}
     result: dict = {}
     for line in m.group(1).splitlines():
-        if ":" in line:
+        if ":" in line and not line.lstrip().startswith("#"):
             k, _, v = line.partition(":")
             result[k.strip()] = v.strip().strip('"').strip("'")
+    return result
+
+
+def parse_frontmatter_raw(text: str) -> dict:
+    """원문 값(따옴표·리스트 기호 포함) 그대로 반환. 검증용."""
+    m = FRONTMATTER_RE.match(text)
+    if not m:
+        return {}
+    result: dict = {}
+    for line in m.group(1).splitlines():
+        if ":" in line and not line.lstrip().startswith("#"):
+            k, _, v = line.partition(":")
+            result[k.strip()] = v.strip()
     return result
 
 
@@ -203,14 +225,32 @@ def check_stale(md_files: list[Path], stale_days: int) -> list[LintIssue]:
 
 
 def check_frontmatter(md_files: list[Path], required_fields: list[str]) -> list[LintIssue]:
-    """필수 frontmatter 필드 누락 점검."""
+    """필수 frontmatter 필드 누락 + Dataview/Calendar 호환성 점검.
+
+    검사 항목:
+      1) 필수 필드 누락 (config.frontmatter.required_fields)
+      2) date 인용 금지 (Dataview Date coerce 차단)
+      3) date ISO 포맷 (YYYY-MM-DD) — Calendar plugin 기본 format 일치
+      4) 단수형 `tag:` 사용 금지 (Obsidian/Dataview 는 tags 복수형만 인덱싱)
+    """
     issues: list[LintIssue] = []
-    if not required_fields:
-        return issues
 
     for f in md_files:
         text = f.read_text(encoding="utf-8", errors="ignore")
+        raw = parse_frontmatter_raw(text)
         fm = parse_frontmatter(text)
+
+        # (1) frontmatter 자체가 없으면 스킵 (다른 lint 에서 커버)
+        if not raw:
+            if required_fields:
+                issues.append(LintIssue(
+                    kind="frontmatter",
+                    path=f,
+                    detail="frontmatter 블록이 없음",
+                ))
+            continue
+
+        # (2) 필수 필드
         missing = [field for field in required_fields if field not in fm]
         if missing:
             issues.append(LintIssue(
@@ -218,6 +258,41 @@ def check_frontmatter(md_files: list[Path], required_fields: list[str]) -> list[
                 path=f,
                 detail=f"필수 필드 누락: {', '.join(missing)}",
             ))
+
+        # (3) date 검증
+        date_raw = raw.get("date", "")
+        date_clean = fm.get("date", "")
+        if date_raw:
+            if QUOTED_RE.match(date_raw):
+                issues.append(LintIssue(
+                    kind="frontmatter",
+                    path=f,
+                    detail=(
+                        f"date 값이 인용 처리됨({date_raw}). "
+                        "Dataview 가 Text 로 처리하여 Date 비교·Calendar 연동이 깨진다. "
+                        "따옴표 제거 권장."
+                    ),
+                ))
+            elif date_clean and not (
+                ISO_DATE_RE.match(date_clean) or ISO_DATETIME_RE.match(date_clean)
+            ):
+                issues.append(LintIssue(
+                    kind="frontmatter",
+                    path=f,
+                    detail=(
+                        f"date 포맷 비표준({date_clean}). "
+                        "Dataview + Calendar 호환을 위해 YYYY-MM-DD 권장."
+                    ),
+                ))
+
+        # (4) 단수형 tag:
+        if "tag" in raw and "tags" not in raw:
+            issues.append(LintIssue(
+                kind="frontmatter",
+                path=f,
+                detail="단수 `tag:` 사용 중. Obsidian/Dataview 는 `tags:` 복수형만 인덱싱.",
+            ))
+
     return issues
 
 

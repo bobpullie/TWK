@@ -4,7 +4,20 @@
   파일명: 원리명 kebab-case (예: wiki/principles/compilation-over-rag.md)
   이 파일 자체는 수정 금지.
   주의: 원리 승격은 인간(디렉터) 명시 승인 필요 — LLM이 자동 승격 금지.
+
+  Frontmatter 규약 (Dataview + Calendar 호환):
+    - date: YYYY-MM-DD  (인용 금지 — 원리 승격일)
+    - tags: 복수형 인라인 리스트
 -->
+---
+date: YYYY-MM-DD
+status: Active
+aliases: []
+tags: [principle]
+scope: ""
+approved_by: ""
+cssclass: twk-principle
+---
 
 # Principle — [원리 이름]
 
@@ -35,5 +48,5 @@
 <!-- [[related_principle_1]] [[related_principle_2]] -->
 
 ---
-_승격 승인일: YYYY-MM-DD_
-_승인자: [디렉터명]_
+_승격 승인일: frontmatter date 참조_
+_승인자: frontmatter approved_by 참조_

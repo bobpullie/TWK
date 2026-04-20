@@ -92,6 +92,34 @@ triggers:
 
 ---
 
+## Frontmatter 계약 (Dataview + Calendar 호환)
+
+모든 L3 wiki 페이지는 다음 통일 frontmatter 를 갖는다. lint.py 가 강제 검증.
+
+```yaml
+---
+date: 2026-04-20          # 인용 금지 — Dataview Date coerce, Calendar default format
+status: Active            # Draft | Active | Accepted | Implemented | Superseded | Archived
+aliases: []
+tags: [decision, tems]    # 복수형 필수
+phase: ""
+scope: ""
+cssclass: twk-decision    # 템플릿별 고유
+---
+```
+
+**필수:** `date`, `status`. **선택:** `aliases`, `tags`, `phase`, `scope`, `project`, `cssclass`.
+
+**엄격 규칙:**
+- `date` 는 반드시 ISO `YYYY-MM-DD` 무인용. 인용하면 Dataview 가 Text 로 인식하여 날짜 비교·Calendar 교차 쿼리가 깨진다.
+- `tags` 는 복수형 (`tag:` 단수는 Obsidian 인덱싱 안 됨).
+- Calendar plugin 은 frontmatter `date` 를 직접 읽지 않으므로, Daily Note 파일명(`YYYY-MM-DD.md`) 과 연동해 Dataview 쿼리(`WHERE date = this.file.day`) 로 백링크.
+
+상세: [`references/obsidian-integration.md`](references/obsidian-integration.md).
+템플릿: [`templates/page-templates/`](templates/page-templates/) 7종 (decision/concept/principle/postmortem/idea/entity/daily-note).
+
+---
+
 ## 프로젝트별 customization — `wiki.config.json`
 
 모든 프로젝트 특화 설정은 `wiki.config.json` 하나로 관리. 스킬 자체는 수정 불필요.

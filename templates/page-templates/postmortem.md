@@ -3,6 +3,30 @@
   복사 위치: wiki/postmortems/YYYYMMDD_<name>.md
   확정판: YYYYMMDD_<name>.md / 최종판: YYYYMMDD_<name>_final.md
   이 파일 자체는 수정 금지.
+
+  Frontmatter 규약 (Dataview + Calendar 호환):
+    - date: YYYY-MM-DD  (인용 금지 — 사후분석 작성일)
+    - taxonomy: T1~T6 / S1~S3 복합 가능
+-->
+---
+date: YYYY-MM-DD
+status: Tentative
+aliases: []
+tags: [postmortem]
+taxonomy: []
+phase: "P5"
+scope: ""
+auditor: ""
+auditor_verdict: ""
+cssclass: twk-postmortem
+---
+<!--
+  status 옵션: Tentative | Confirmed | Disputed
+  taxonomy 코드:
+    실패: T1 Theory / T2 Specification / T3 Implementation / T4 Parameter / T5 Data / T6 Regime
+    성공: S1 Robust / S2 Regime-Lucky / S3 Parameter-Lucky
+  복합 가능: [T2, T6] 처럼 배열
+  auditor_verdict: PASS | FAIL | NEEDS_REVISION
 -->
 
 # Postmortem — [실험/결과 제목]
@@ -14,27 +38,6 @@
 <!-- Mode A: [[../../raw/backtest_logs/YYYYMMDD_<name>]] -->
 <!-- 관련 아이디어·가설 페이지 -->
 <!-- [[../ideas/YYYYMMDD_<idea_name>]] [[../hypotheses/YYYYMMDD_<hyp_name>]] -->
-
-## Taxonomy 태그
-
-<!--
-실패 분류:
-  T1 Theory      — 이론 자체가 틀림
-  T2 Specification — 이론은 맞으나 구체화 오류
-  T3 Implementation — 구현 버그
-  T4 Parameter   — 파라미터 과적합
-  T5 Data        — 데이터 오류 (생존편향, lookahead 등)
-  T6 Regime      — 레짐 의존성 미반영
-
-성공 분류:
-  S1 Robust       — 다양한 조건에서 검증된 강건한 성공
-  S2 Regime-Lucky — 특정 레짐에서만 작동
-  S3 Parameter-Lucky — 파라미터 민감도 높음
-
-복합 가능: 예: T2 + T6
--->
-**분류:** <!-- 예: T2 Specification + T6 Regime -->
-**상태:** <!-- Tentative | Confirmed | Disputed -->
 
 ## 결과가 실제 보여준 것
 
@@ -63,8 +66,5 @@
 
 ## Auditor 판정
 
-<!-- config에 auditor가 정의된 경우 해당 섹션 사용.
-     PASS / FAIL / NEEDS REVISION + 확증편향 탐지 결과 + 대안 설명 -->
-
-_판정일: YYYY-MM-DD_
-_판정자: <!-- Auditor 이름 또는 N/A -->_
+<!-- frontmatter auditor + auditor_verdict 사용. 본문에는 상세 서술. -->
+<!-- 확증편향 탐지 결과 + 대안 설명 -->

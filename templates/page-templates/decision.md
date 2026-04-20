@@ -3,21 +3,31 @@
   복사 위치: wiki/decisions/YYYY-MM-DD_<kebab-topic>.md
   이 파일 자체는 수정 금지.
   파일명 예: 2026-04-20_knowledge-system-3layer-setup.md
+
+  Frontmatter 규약 (Dataview + Calendar 호환):
+    - date: YYYY-MM-DD  (인용 금지 — Dataview Date 자동 변환)
+    - tags: 복수형 인라인 리스트
+    - aliases: Obsidian 별칭 검색
+    - cssclass: Obsidian/Calendar 스타일 훅
 -->
 ---
 date: YYYY-MM-DD
 status: Draft
-# status 옵션: Draft | Active | Implemented | Superseded | Archived
+aliases: []
+tags: [decision]
 phase: ""
-# phase 예: 설계중 | 운영중 | 실험적
 scope: ""
-# scope: 이 결정이 영향을 미치는 범위 (예: "씬 렌더링 파이프라인", "전체 프로젝트")
 project: ""
-# project: 해당 프로젝트명 또는 ALL
-tags: []
+cssclass: twk-decision
 ---
+<!--
+  status 옵션: Draft | Active | Accepted | Implemented | Superseded | Archived
+  phase 예: 설계중 | 운영중 | 실험적
+  scope: 이 결정이 영향을 미치는 범위
+  project: 해당 프로젝트명 또는 ALL
+-->
 
-# [결정 제목]
+# Decision — [결정 제목]
 
 ## TL;DR
 

@@ -3,7 +3,20 @@
   복사 위치: wiki/concepts/<name>.md
   파일명: 개념명 그대로 (예: wiki/concepts/PIT.md, wiki/concepts/3-Layer-Wiki.md)
   이 파일 자체는 수정 금지.
+
+  Frontmatter 규약 (Dataview + Calendar 호환):
+    - date: YYYY-MM-DD  (인용 금지)
+    - tags: 복수형 인라인 리스트
 -->
+---
+date: YYYY-MM-DD
+status: Active
+aliases: []
+tags: [concept]
+phase: ""
+scope: ""
+cssclass: twk-concept
+---
 
 # Concept — [개념명]
 

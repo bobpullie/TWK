@@ -3,21 +3,28 @@
   복사 위치: wiki/ideas/YYYYMMDD_<name>.md
   파일명 예: 20260420_compass_v4_macro_redesign.md
   이 파일 자체는 수정 금지.
+
+  Frontmatter 규약 (Dataview + Calendar 호환):
+    - date: YYYY-MM-DD  (인용 금지 — 아이디어 등록일, Calendar 연동)
+    - id: IDEA-YYYYMMDD-NNN (날짜 + 당일 순번)
+-->
+---
+date: YYYY-MM-DD
+status: Active
+aliases: []
+tags: [idea]
+id: ""
+proposer: ""
+phase_tag: ""
+cssclass: twk-idea
+---
+<!--
+  status: Active | Iterating | Pivoted | Abandoned | Concluded
+  id 자동 부여 예: IDEA-20260420-001
+  phase_tag: Ideation | Design | Validation | Postmortem (config sections[].phase_tag 매핑)
 -->
 
 # Idea — [아이디어 제목]
-
-## ID
-
-<!-- 자동 부여: IDEA-YYYYMMDD-NNN (날짜 + 당일 순번). 예: IDEA-20260420-001 -->
-
-## 날짜
-
-YYYY-MM-DD
-
-## 제안자
-
-<!-- 에이전트명 또는 인간 이름 -->
 
 ## 문제 정의
 
@@ -38,13 +45,3 @@ YYYY-MM-DD
 
 <!-- 관련 postmortem, 결정, 아이디어 wikilink -->
 <!-- [[../postmortems/YYYYMMDD_xxx]] [[../decisions/YYYY-MM-DD_xxx]] -->
-
-## 상태
-
-<!-- Active / Iterating / Pivoted / Abandoned / Concluded -->
-
-## 연결 워크플로우 단계
-
-<!-- 현재 이 아이디어가 속한 워크플로우 단계 -->
-<!-- 예: Ideation | Design | Validation | Postmortem -->
-<!-- config의 sections[].phase_tag에 매핑되는 값 사용 -->
