@@ -1,5 +1,7 @@
 ---
 name: TWK
+upstream: https://github.com/bobpullie/TWK
+update_cmd: git -C "$HOME/.claude/skills/TWK" pull origin main
 description: >
   TriadWiKi (TWK) — Karpathy LLM Wiki 방법론 Triad Chord Studio 전용 구현체 (구 llm-wiki). 3-Layer (Raw / Wiki / Schema) +
   3 Operations (Ingest / Query / Lint) + Compilation > RAG 원칙.

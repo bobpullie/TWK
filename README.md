@@ -6,17 +6,29 @@
 
 ## Install
 
-글로벌 Claude Code 스킬로 설치:
+글로벌 Claude Code 스킬로 설치 (**clone 권장** — pull-based 업데이트 지원):
 
 ```bash
-# Option A: clone
+# Unix/macOS
 git clone https://github.com/bobpullie/TWK.git "$HOME/.claude/skills/TWK"
 
-# Option B: copy (Windows)
-git clone https://github.com/bobpullie/TWK.git %USERPROFILE%\.claude\skills\TWK
+# Windows (Git Bash)
+git clone https://github.com/bobpullie/TWK.git "$USERPROFILE/.claude/skills/TWK"
 ```
 
 설치 후 Claude Code에서 `Skill` 도구로 `TWK` 호출 가능.
+
+## Updating
+
+설치 디렉토리가 clone일 경우:
+
+```bash
+git -C "$HOME/.claude/skills/TWK" pull origin main
+```
+
+위상군 또는 다른 에이전트가 upstream repo에 push 하면, 모든 에이전트가 위 명령으로 기능 업데이트 수신 가능.
+
+**검증:** `head -5 "$HOME/.claude/skills/TWK/SKILL.md"` 에 `upstream: https://github.com/bobpullie/TWK` 표시.
 
 ## Structure
 
