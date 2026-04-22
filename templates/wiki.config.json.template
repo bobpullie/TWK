@@ -102,5 +102,34 @@
     "versioned": "YYYYMMDD_<name>_v<n>.md",
     "daily_note": "YYYY-MM-DD.md",
     "_daily_note_note": "Calendar plugin 은 이 포맷의 파일명만 dot 으로 인식. frontmatter date 와 반드시 일치."
+  },
+
+  "session_artifacts": {
+    "_description": "normalize_session_frontmatter.py 가 스캔·주입하는 세션 산출물 폴더 설정. wiki_validate_root 는 검증만(쓰기 없음). 파일명 맨 앞에서 YYYY-MM-DD 또는 YYYYMMDD 패턴으로 date 추출. 실패 시 file.mtime fallback. cssclass 는 Obsidian 스타일 구분용.",
+    "wiki_validate_root": "docs/wiki",
+    "date_patterns": [
+      "^(\\d{4})-(\\d{2})-(\\d{2})",
+      "^(\\d{4})(\\d{2})(\\d{2})"
+    ],
+    "folders": [
+      {
+        "path": "docs/session_archive",
+        "type": "raw",
+        "cssclass": "twk-raw",
+        "tags": ["session", "raw", "L2"]
+      },
+      {
+        "path": "handover_doc",
+        "type": "handover",
+        "cssclass": "twk-handover",
+        "tags": ["session", "handover"]
+      },
+      {
+        "path": "qmd_drive/recaps",
+        "type": "recap",
+        "cssclass": "twk-recap",
+        "tags": ["session", "recap"]
+      }
+    ]
   }
 }

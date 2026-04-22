@@ -13,6 +13,9 @@ triggers:
   - "지식 베이스 구축"
   - "TWK 초기화"
   - "init_wiki"
+  - "session artifacts"
+  - "세션 산출물 인덱스"
+  - "normalize_session_frontmatter"
 ---
 
 # TriadWiKi (TWK) Skill
@@ -30,6 +33,7 @@ triggers:
 | 기존 wiki에서 선행 지식을 합성해 답변할 때 | "wiki query \<topic\>" |
 | wiki 건강도 점검 (모순/stale/고아 탐지) 시 | "wiki lint", 주기 자동 |
 | 세션 종료 시 L2 archive + L3 wiki 갱신 시 | session-lifecycle Step N |
+| 세션 산출물(L2+handover+recap+L3) frontmatter 자동 정규화 + 통합 타임라인 | `normalize_session_frontmatter.py --apply` (lifecycle step) |
 
 ---
 
@@ -72,6 +76,25 @@ triggers:
 | **Lint** | 5 세션마다 / 10 페이지 추가 시 | Sonnet 위임 or 수동 트리거 | log.md Lint 섹션, 수정 이슈 리스트 |
 
 상세 절차: [`references/operations.md`](references/operations.md)
+
+### 보조 Operation — Session Artifacts Normalize (v1.2~)
+
+세션 종료 시점에 L2 raw · 핸드오버 · recap 등 **wiki 외부 세션 산출물** 의 frontmatter 를 idempotent 하게 자동 주입하고, Dataview 기반 통합 타임라인(`session_artifacts.md`)을 통해 4 폴더를 한 눈에 볼 수 있게 하는 보조 operation.
+
+| 항목 | 값 |
+|------|-----|
+| 스크립트 | `scripts/normalize_session_frontmatter.py` |
+| 설정 | `wiki.config.json` 의 `session_artifacts` 섹션 (folders · date_patterns · wiki_validate_root) |
+| 주입 필드 | `date` · `type` · `cssclass` · `tags` · `session` |
+| 병합 규칙 | 스칼라: 기존 값 skip · 배열(tags): union (기존 보존 + 누락분 append) |
+| Idempotency | 2회차 apply 시 `kept` 만 반환. 재호출 안전 |
+| wiki root | 검증만 (필수 필드 `date`·`status` 체크, 쓰기 없음) |
+| 템플릿 | `templates/session_artifacts.md.template` (`docs/session_artifacts.md` 로 복사 후 FROM 절 조정) |
+
+**사용 예** (세션 종료 lifecycle step):
+```bash
+python ~/.claude/skills/TWK/scripts/normalize_session_frontmatter.py --apply
+```
 
 ---
 
