@@ -77,6 +77,26 @@ triggers:
 
 상세 절차: [`references/operations.md`](references/operations.md)
 
+### Index 자동 생성 — 위상군 스타일 (v1.2~)
+
+`init_wiki.py` 는 `templates/index.md.template` + `templates/index_section_block.md.template` 를 읽어 **위상군 스타일** Dataview 자동화 index 를 생성한다. 하드코딩 리스트가 아닌 `FROM "<wiki_root>/<section>"` 쿼리 기반이라 새 페이지 추가 시 index 수정 불필요.
+
+| 생성물 | 위치 | 내용 |
+|--------|------|------|
+| `<wiki_root>/index.md` | wiki 루트 | Frontmatter (`cssclass: twk-index`) + abstract/info 메타 + `![[session_artifacts]]` embed + 섹션별 Dataview 블록 + "전체 현황" 접힘 |
+| `<wiki_root>/../session_artifacts.md` | wiki 부모 | 세션 산출물 통합 타임라인 (template 복사, 기존 파일이면 skip) |
+
+**섹션별 자동화**: `--sections` 에 주어진 이름마다 Dataview 블록 생성. 필드·정렬·callout 타입은 `SECTION_LABELS`·`SECTION_DESCS`·`SECTION_CALLOUTS`·`SECTION_SORT_BY_DATE`·`SECTION_SHOW_PHASE` 딕셔너리에서 결정. 커스텀 섹션명 추가 시 딕셔너리에 엔트리 넣거나 기본값 (`entity` / `file.name ASC` / `info`) 적용.
+
+**초기화 후 수동 조정 필요** (3개 placeholder):
+1. abstract callout 의 "프로젝트 정체성 한 줄"
+2. "핵심 시스템" 테이블의 `SystemA` / `SystemB`
+3. "혼동 방지 대조표" 의 `ConceptA vs ConceptB`
+
+**session_artifacts.md embed**: Obsidian shortest-path resolution 으로 `![[session_artifacts]]` 가 vault 어디에 있든 해석. 기본 배치(`<wiki_root>/..`)는 위상군(`docs/`) · 코드군(`fermion_wiki/`) 공통 관행.
+
+---
+
 ### 보조 Operation — Session Artifacts Normalize (v1.2~)
 
 세션 종료 시점에 L2 raw · 핸드오버 · recap 등 **wiki 외부 세션 산출물** 의 frontmatter 를 idempotent 하게 자동 주입하고, Dataview 기반 통합 타임라인(`session_artifacts.md`)을 통해 4 폴더를 한 눈에 볼 수 있게 하는 보조 operation.

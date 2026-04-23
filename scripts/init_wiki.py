@@ -25,32 +25,6 @@ SCHEMA_TEMPLATES_DIR = TEMPLATES_DIR / "schema"
 VALID_MODES = ["karpathy-pure", "session-extract", "hybrid"]
 MODE_ALIASES = {"A": "karpathy-pure", "B": "session-extract"}
 
-INDEX_MD_TEMPLATE = """\
-# {project_id} Wiki — Index
-
-> 마지막 갱신: {today} (초기화)
-
-{dataview_block}
-
----
-
-{sections_toc}
-
----
-*관리: LLM (Ingest/Lint 시 자동 갱신), 큐레이션: 인간*
-*이 파일은 wiki의 진입점. Obsidian에서 북마크 권장.*
-"""
-
-DATAVIEW_BLOCK = """\
-```dataview
-TABLE date, status, scope
-FROM "{wiki_root}"
-WHERE file.name != "index" AND file.name != "log"
-SORT date DESC
-LIMIT 20
-```
-"""
-
 LOG_MD_TEMPLATE = """\
 # Wiki Change Log
 
@@ -59,11 +33,136 @@ LOG_MD_TEMPLATE = """\
 ## {today} — [Init] wiki 초기화 | 섹션: {sections}
 """
 
-SECTION_TOC_TEMPLATE = """\
-## {section_name_title}
+# ----------------------------------------------------------------------------
+# index.md 템플릿 파일 (위상군 스타일) — TWK v1.2+
+# ----------------------------------------------------------------------------
+INDEX_TEMPLATE_FILE = TEMPLATES_DIR / "index.md.template"
+INDEX_SECTION_BLOCK_TEMPLATE_FILE = TEMPLATES_DIR / "index_section_block.md.template"
+SESSION_ARTIFACTS_TEMPLATE_FILE = TEMPLATES_DIR / "session_artifacts.md.template"
 
-*(아직 없음)*
-"""
+SECTION_LABELS = {
+    "ideas": "아이디어",
+    "hypotheses": "가설",
+    "strategies": "전략",
+    "systems": "시스템",
+    "indicators": "지표",
+    "concepts": "개념",
+    "backtests": "백테스트",
+    "postmortems": "사후분석",
+    "diagnostics": "진단",
+    "principles": "원리",
+    "decisions": "결정",
+    "patterns": "패턴",
+    "architecture": "아키텍처",
+    "pipeline": "파이프라인",
+    "reference": "레퍼런스",
+}
+
+SECTION_DESCS = {
+    "ideas": "아이디어 단계 (HDIL P1~P3)",
+    "hypotheses": "검증 가능 가설 (HDIL P3)",
+    "strategies": "활성 / 동결 / 폐기 전략",
+    "systems": "엔진·데이터·파이프라인 런타임 시스템",
+    "indicators": "매크로·기술 지표",
+    "concepts": "수식·원리·용어 정의",
+    "backtests": "백테스트·Ablation·A/B·WF 검증 기록",
+    "postmortems": "실제 실패·성공 원인 분석 (HDIL P5·P6)",
+    "diagnostics": "실패 원인 진단·밸런싱 (HDIL P7)",
+    "principles": "Doctrine 편입 후보 (HDIL P10)",
+    "decisions": "아키텍처·정책 결정 (ADR)",
+    "patterns": "반복되는 위상 패턴",
+    "architecture": "시스템 아키텍처",
+    "pipeline": "데이터·배포 파이프라인",
+    "reference": "외부 레퍼런스·링크",
+}
+
+SECTION_CALLOUTS = {
+    "ideas": "example",
+    "hypotheses": "example",
+    "strategies": "check",
+    "systems": "info",
+    "indicators": "info",
+    "concepts": "info",
+    "backtests": "abstract",
+    "postmortems": "bug",
+    "diagnostics": "warning",
+    "principles": "quote",
+    "decisions": "check",
+    "patterns": "abstract",
+    "architecture": "info",
+    "pipeline": "info",
+    "reference": "info",
+}
+
+# date 기반 정렬이 의미있는 섹션 vs 이름 기반
+SECTION_SORT_BY_DATE = {
+    "ideas", "hypotheses", "backtests", "postmortems",
+    "diagnostics", "decisions",
+}
+
+# phase 컬럼을 표시할 섹션
+SECTION_SHOW_PHASE = {
+    "ideas", "hypotheses", "backtests", "diagnostics",
+}
+
+
+def _load_template(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _render_section_block(section: str, wiki_root_str: str) -> str:
+    """섹션 이름 하나를 받아 Dataview 블록 생성."""
+    template = _load_template(INDEX_SECTION_BLOCK_TEMPLATE_FILE)
+    # 주석(<!-- ... -->) 제거 (init_wiki 문맥에선 불필요)
+    template = _strip_html_comments(template)
+
+    label = SECTION_LABELS.get(section, section.capitalize())
+    desc = SECTION_DESCS.get(section, "")
+    callout = SECTION_CALLOUTS.get(section, "info")
+    sort_field = "date DESC" if section in SECTION_SORT_BY_DATE else "file.name ASC"
+
+    # Dataview 컬럼 구성 (phase 포함 여부)
+    col_entity = SECTION_LABELS.get(section, section.capitalize())
+    if section in SECTION_SHOW_PHASE:
+        columns = (
+            f'  file.link as "{col_entity}",\n'
+            f'  status as "상태",\n'
+            f'  phase as "Phase",\n'
+            f'  date as "날짜"'
+        )
+    elif section in SECTION_SORT_BY_DATE:
+        columns = (
+            f'  file.link as "{col_entity}",\n'
+            f'  status as "상태",\n'
+            f'  date as "날짜"'
+        )
+    else:
+        columns = (
+            f'  file.link as "{col_entity}",\n'
+            f'  status as "상태",\n'
+            f'  scope as "범위"'
+        )
+
+    replacements = {
+        "{{SECTION_NAME}}": section,
+        "{{SECTION_NAME_TITLE}}": section.capitalize(),
+        "{{SECTION_LABEL}}": label,
+        "{{SECTION_DESC}}": desc,
+        "{{CALLOUT_TYPE}}": callout,
+        "{{DATAVIEW_COLUMNS}}": columns,
+        "{{WIKI_ROOT}}": wiki_root_str,
+        "{{SORT_FIELD}}": sort_field,
+    }
+    out = template
+    for k, v in replacements.items():
+        out = out.replace(k, v)
+    return out
+
+
+def _strip_html_comments(text: str) -> str:
+    """<!-- ... --> 블록 (멀티라인) 제거. 템플릿 내부 주석을 최종 산출물에서 제외."""
+    import re
+    return re.sub(r"<!--.*?-->\s*", "", text, flags=re.DOTALL)
 
 
 def normalize_mode(mode: str) -> str:
@@ -142,22 +241,31 @@ def build_index_md(
     sections: list[str],
     dataview_enabled: bool,
 ) -> str:
+    """index.md 본문 생성 — 위상군 스타일 템플릿 기반 (v1.2+).
+
+    `dataview_enabled=False` 인 경우에도 템플릿 뼈대는 유지 (Dataview 블록은 코드펜스로 렌더만
+    안 될 뿐). 기존 프로젝트 입장에서 호환성 유지.
+    """
     today = datetime.now().strftime("%Y-%m-%d")
-    sections_toc = "\n".join(
-        SECTION_TOC_TEMPLATE.format(section_name_title=s.capitalize())
-        for s in sections
+    template = _load_template(INDEX_TEMPLATE_FILE)
+    # 템플릿 머리의 <!-- ... --> 주석 블록 제거 (최종 index.md 에 안 노출)
+    template = _strip_html_comments(template)
+
+    sections_blocks = "\n---\n\n".join(
+        _render_section_block(s, wiki_root_str) for s in sections
     )
-    dataview_block = (
-        DATAVIEW_BLOCK.format(wiki_root=wiki_root_str)
-        if dataview_enabled
-        else ""
-    )
-    return INDEX_MD_TEMPLATE.format(
-        project_id=project_id,
-        today=today,
-        dataview_block=dataview_block,
-        sections_toc=sections_toc,
-    )
+
+    replacements = {
+        "{{PROJECT_ID}}": project_id,
+        "{{PROJECT_ID_LOWER}}": project_id.lower(),
+        "{{TODAY}}": today,
+        "{{WIKI_ROOT}}": wiki_root_str,
+        "{{SECTIONS_BLOCKS}}": sections_blocks,
+    }
+    out = template
+    for k, v in replacements.items():
+        out = out.replace(k, v)
+    return out
 
 
 def build_log_md(sections: list[str]) -> str:
@@ -201,6 +309,18 @@ def create_structure(
         wiki_root / "log.md",
         build_log_md(sections),
     ))
+
+    # session_artifacts.md — 위상군 스타일 index embed 대상 (TWK v1.2+)
+    # 배치 관행: wiki_root 의 부모 디렉토리 (index 와 동일 depth 에서 한 단계 상위).
+    # 예) wiki_root=docs/wiki → docs/session_artifacts.md
+    # Obsidian shortest-path resolution 으로 `![[session_artifacts]]` 가 index 에서 해석됨.
+    if SESSION_ARTIFACTS_TEMPLATE_FILE.exists():
+        session_artifacts_dst = wiki_root.parent / "session_artifacts.md"
+        actions.append((
+            "copy_if_missing",
+            session_artifacts_dst,
+            str(SESSION_ARTIFACTS_TEMPLATE_FILE),
+        ))
 
     # schema/ 디렉토리 + templates 복사
     schema_dir = project_root / "schema"
@@ -262,6 +382,16 @@ def create_structure(
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_path, target)
                 print(f"[ok] copy {src_path.name} → {target}")
+        elif action_type == "copy_if_missing":
+            src_path = Path(extra)
+            if target.exists():
+                print(f"[skip] {target} (이미 존재 — 덮어쓰지 않음)")
+            elif dry_run:
+                print(f"[dry-run] copy_if_missing {src_path.name} → {target}")
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_path, target)
+                print(f"[ok] copy_if_missing {src_path.name} → {target}")
 
 
 def main() -> int:

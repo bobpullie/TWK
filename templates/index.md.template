@@ -1,0 +1,103 @@
+<!--
+  TWK v1.2+ index.md 템플릿 — 위상군 스타일 (Dataview 자동화 + session_artifacts embed).
+
+  init_wiki.py 가 읽어 placeholder 를 치환 후 <wiki_root>/index.md 로 저장:
+    {{PROJECT_ID}}       — wiki.config.json.project_id
+    {{PROJECT_ID_LOWER}} — 소문자 형태
+    {{TODAY}}            — 초기화 날짜 YYYY-MM-DD
+    {{WIKI_ROOT}}        — Dataview FROM 절용 경로 (vault root 기준)
+    {{SECTIONS_BLOCKS}}  — 각 section 별 Dataview 섹션 (init_wiki.py 자동 생성)
+
+  생성 후 수동 조정 필요 (placeholder 문구):
+    1. abstract callout 아래의 "프로젝트 정체성 한 줄" 문구
+    2. "핵심 시스템" 테이블의 SystemA / SystemB → 실제 페이지명
+    3. "혼동 방지 대조표" 의 ConceptA vs ConceptB → 실제 쌍
+
+  session_artifacts.md 는 init_wiki.py 가 <wiki_root 부모>/session_artifacts.md 로 함께 생성.
+  Obsidian shortest-path resolution 으로 `![[session_artifacts]]` embed 가 해석됨.
+
+  주의: 이 주석 블록 전체가 최종 index.md 에서 제거됨 (_strip_html_comments).
+  본문 안에는 HTML 주석 금지 — callout 내부에 두면 공백 처리 문제로 nesting 이 깨짐.
+-->
+---
+title: {{PROJECT_ID}} Wiki
+date: {{TODAY}}
+status: Active
+updated: {{TODAY}}
+cssclass: twk-index
+tags: [wiki, index, {{PROJECT_ID_LOWER}}]
+---
+
+# {{PROJECT_ID}} Wiki
+
+> [!abstract]+ {{PROJECT_ID}} Knowledge Base
+> Karpathy **3-Layer Wiki 방법론** 의 L3 큐레이션 레이어.
+>
+> *(여기에 프로젝트 정체성 한 줄 — 초기화 후 수동 작성)*
+
+> [!info] 메타
+> - **마지막 갱신** — {{TODAY}} (초기화)
+> - **관리 주기** — Ingest 자동 · Lint 5세션마다 또는 10 페이지
+> - **변경 이력** — [[log|Wiki Change Log]]
+> - **스키마** — [[SCHEMA]] · **운영 가이드** — [[HOW_TO_USE]]
+
+---
+
+## 세션 산출물 (통합)
+
+> [!tip] 세션 산출물 통합 타임라인
+> 아래는 [[session_artifacts]] 의 embed. handover · session-log · raw · L3 wiki 를 한 화면에. 독립 열람도 가능.
+
+![[session_artifacts]]
+
+---
+
+## 최근 변경
+
+```dataview
+TABLE WITHOUT ID
+  file.link as "페이지",
+  date as "날짜",
+  status as "상태",
+  scope as "범위"
+FROM "{{WIKI_ROOT}}"
+WHERE file.name != "index" AND file.name != "log"
+SORT date DESC
+LIMIT 8
+```
+
+---
+
+## 시스템 빠른 이동
+
+> [!tip]+ 핵심 시스템 *(초기화 후 실제 페이지로 치환)*
+> | 시스템 | 정의 | 한 줄 설명 |
+> |:------:|:-----|:----------|
+> | **SystemA** | [[SystemA]] | 설명 |
+> | **SystemB** | [[SystemB]] | 설명 |
+
+> [!question]+ 혼동 방지 대조표 *(초기화 후 실제 쌍으로 치환)*
+> - [[ConceptA]] vs [[ConceptB]] — *차이 요약*
+
+---
+
+{{SECTIONS_BLOCKS}}
+
+---
+
+> [!example]- 위키 전체 현황 (펼치기)
+> ```dataview
+> TABLE WITHOUT ID
+>   file.link as "페이지",
+>   date as "날짜",
+>   status as "상태",
+>   scope as "범위"
+> FROM "{{WIKI_ROOT}}"
+> WHERE file.name != "index" AND file.name != "log"
+> SORT date DESC
+> ```
+
+---
+
+*관리 — LLM (Ingest / Lint 자동 갱신) · 큐레이션 — 인간*
+*이 파일은 Wiki 의 진입점. Obsidian 북마크 권장.*

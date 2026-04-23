@@ -1,0 +1,22 @@
+<!--
+  index.md 내 각 section 별 Dataview 블록 템플릿.
+  init_wiki.py 가 sections 리스트를 순회하며 아래 placeholder 를 치환:
+    {{SECTION_NAME}}           — 예: ideas
+    {{SECTION_NAME_TITLE}}     — 예: Ideas
+    {{SECTION_LABEL}}          — 예: 아이디어 (한글 라벨, SECTION_LABELS dict 에서 조회)
+    {{SECTION_DESC}}           — 예: "HDIL Phase 1 (Ideation) 단계" (SECTION_DESCS dict 에서 조회)
+    {{CALLOUT_TYPE}}           — info / example / check / bug / warning / quote / abstract (섹션별 dict)
+    {{DATAVIEW_COLUMNS}}       — phase 컬럼 포함 여부 등 섹션별 변형
+    {{WIKI_ROOT}}              — FROM 절 공용
+    {{SORT_FIELD}}             — "date DESC" (ideas/postmortems/backtests/diagnostics) or "file.name ASC" (concepts/principles/indicators/strategies/systems)
+-->
+## {{SECTION_NAME_TITLE}} — {{SECTION_LABEL}}
+
+> [!{{CALLOUT_TYPE}}] {{SECTION_DESC}}
+
+```dataview
+TABLE WITHOUT ID
+{{DATAVIEW_COLUMNS}}
+FROM "{{WIKI_ROOT}}/{{SECTION_NAME}}"
+SORT {{SORT_FIELD}}
+```
