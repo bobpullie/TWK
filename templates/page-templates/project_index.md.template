@@ -1,0 +1,31 @@
+---
+title: {{PROJECT_NAME}} Wiki
+cssclass: twk-project-index
+project_id: {{PROJECT_ID}}
+status: {{STATUS}}
+description: {{DESCRIPTION}}
+date: {{DATE}}
+---
+
+# {{PROJECT_NAME}}
+> {{DESCRIPTION}}
+
+## 📍 현재 마일스톤
+
+(여기에 진행 중인 마일스톤 작성)
+
+## 📚 핵심 개념
+
+```dataview
+LIST FROM "projects/{{PROJECT_ID}}/concepts"
+```
+
+## ⚖️ 주요 결정
+
+```dataview
+TABLE date, status FROM "projects/{{PROJECT_ID}}/decisions" SORT date DESC
+```
+
+## 🔄 핸드오버
+
+[[../../handovers/{{PROJECT_ID}}/|전체 핸드오버 보기]]

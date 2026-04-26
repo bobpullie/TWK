@@ -1,0 +1,56 @@
+---
+title: KJI Knowledge Vault
+cssclass: twk-index
+---
+
+# 🧭 KJI Knowledge Vault
+
+> Triad Chord Studio 통합 지식 베이스 — 6개 프로젝트 단일 진입점
+
+## 📊 프로젝트 현황
+
+```dataview
+TABLE WITHOUT ID
+  ("[" + name + "](projects/" + project_id + "/)") AS "프로젝트",
+  status AS "상태",
+  description AS "소개",
+  last_activity AS "최근 활동",
+  page_count AS "페이지"
+FROM "_meta/projects"
+SORT last_activity DESC
+```
+
+## 📝 최근 등록된 작업 (전 프로젝트, 7일)
+
+```dataview
+TABLE WITHOUT ID
+  file.link AS "페이지",
+  split(file.folder, "/")[1] AS "프로젝트",
+  date AS "날짜",
+  status AS "상태"
+FROM "projects"
+WHERE date >= date(today) - dur(7 days)
+SORT date DESC
+LIMIT 15
+```
+
+## 🔄 최신 핸드오버 (각 프로젝트 1건)
+
+```dataview
+TABLE WITHOUT ID
+  file.link AS "핸드오버",
+  split(file.folder, "/")[1] AS "프로젝트",
+  date AS "날짜"
+FROM "handovers"
+WHERE type = "handover"
+SORT date DESC
+LIMIT 6
+```
+
+## 🔧 새 프로젝트 추가
+
+```bash
+twk vault join --vault-id <vault-id> --project-root <경로>
+```
+
+상세 가이드: [[_meta/new_project_guide]]
