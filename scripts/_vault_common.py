@@ -10,14 +10,17 @@ WIKI_CONFIG_NAME = "wiki.config.json"
 
 
 class VaultConfigError(Exception):
-    """vault.config.json 관련 오류."""
+    """vault.config.json / wiki.config.json 로드/파싱 오류."""
 
 
 def load_vault_config(vault_root: Path) -> dict[str, Any]:
     path = vault_root / VAULT_CONFIG_NAME
     if not path.exists():
         raise VaultConfigError(f"vault.config.json not found at {vault_root}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise VaultConfigError(f"vault.config.json malformed at {path}: {exc}") from exc
 
 
 def save_vault_config(vault_root: Path, cfg: dict[str, Any]) -> None:
@@ -29,7 +32,10 @@ def load_wiki_config(project_root: Path) -> dict[str, Any]:
     path = project_root / WIKI_CONFIG_NAME
     if not path.exists():
         raise VaultConfigError(f"wiki.config.json not found at {project_root}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise VaultConfigError(f"wiki.config.json malformed at {path}: {exc}") from exc
 
 
 def save_wiki_config(project_root: Path, cfg: dict[str, Any]) -> None:

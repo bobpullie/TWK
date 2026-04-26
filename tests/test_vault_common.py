@@ -39,3 +39,17 @@ def test_find_vault_config_not_found(tmp_path: Path):
 def test_load_wiki_config(fake_project: Path):
     cfg = load_wiki_config(fake_project)
     assert cfg["project_id"] == "fake"
+
+
+def test_load_vault_config_malformed_raises(tmp_vault_root: Path):
+    """Malformed JSON wraps to VaultConfigError, not raw JSONDecodeError."""
+    (tmp_vault_root / "vault.config.json").write_text("{not valid json", encoding="utf-8")
+    with pytest.raises(VaultConfigError, match="malformed"):
+        load_vault_config(tmp_vault_root)
+
+
+def test_load_wiki_config_malformed_raises(tmp_path: Path):
+    """Same wrapping for wiki.config.json."""
+    (tmp_path / "wiki.config.json").write_text("{nope", encoding="utf-8")
+    with pytest.raises(VaultConfigError, match="malformed"):
+        load_wiki_config(tmp_path)
