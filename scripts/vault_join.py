@@ -16,6 +16,7 @@ from scripts._vault_common import (
     find_vault_config,
     VAULT_CONFIG_NAME, WIKI_CONFIG_NAME,
 )
+# create_junction is imported by name so tests can monkeypatch scripts.vault_join.create_junction
 from scripts._vault_junction import create_junction, remove_junction, JunctionError
 
 
@@ -124,7 +125,19 @@ def apply_join(
     tags: list[str],
     joined_at: DateType,
 ) -> None:
-    """프로젝트를 vault 에 합류시킨다 — 트랜잭션 의미론 (실패 시 전체 원복)."""
+    """프로젝트를 메타 vault 에 합류 — 트랜잭션 (실패 시 전체 원복).
+
+    1) 사전 검증 → 2) wcfg/vcfg 백업 → 3) wcfg 패치 + vcfg append + junction 생성.
+    실패 시 wcfg/vcfg 원복 + 생성된 junction 제거.
+
+    Raises:
+        JoinValidationError: 사전 검증 실패 (입력 오류, 상태 무변경).
+        JoinError: 적용 도중 실패 (전체 원복 후 재발 — 환경 점검 필요).
+
+    Note:
+        rollback 은 configs 와 created junctions 만 원복.
+        mkdir 로 생성된 빈 부모 디렉토리(예: vault_root/handovers/)는 청소하지 않음.
+    """
     # 사전 검증 (실패 시 JoinValidationError — try 블록 밖)
     assert_project_has_wiki_config(project_root)
     assert_no_duplicate_id(vault_root, project_id)

@@ -157,3 +157,4 @@ def test_apply_join_rollback_on_error(initialized_vault: Path, fake_project: Pat
     wcfg = load_wiki_config(fake_project)
     assert "vault_membership" not in wcfg  # wiki.config 원복
     assert not (initialized_vault / "projects" / "fake").exists()  # 부분 junction 제거
+    assert not (initialized_vault / "handovers" / "fake").exists()  # 2nd 호출 실패 — 애초에 생성 안 됨
