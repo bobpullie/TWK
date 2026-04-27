@@ -1,11 +1,11 @@
 """TWK vault sync — junction → mirror 복사 + git push.
 
-Usage:
-    python vault_sync.py                         # vault.config.json 자동 탐색
-    python vault_sync.py --vault-root E:/TWK_Vault
-    python vault_sync.py --dry-run               # 변경 미리보기
-    python vault_sync.py --project wesang        # 특정 프로젝트만
-    python vault_sync.py --no-push               # mirror 만 갱신, push skip
+Usage (run from TWK root):
+    python -m scripts.vault_sync                         # vault.config.json 자동 탐색
+    python -m scripts.vault_sync --vault-root E:/TWK_Vault
+    python -m scripts.vault_sync --dry-run               # 변경 미리보기
+    python -m scripts.vault_sync --project wesang        # 특정 프로젝트만
+    python -m scripts.vault_sync --no-push               # mirror 만 갱신, push skip
 """
 from __future__ import annotations
 
