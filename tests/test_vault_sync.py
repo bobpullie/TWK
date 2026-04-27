@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -96,3 +97,67 @@ def test_collect_project_stats_empty_project(tmp_path: Path):
     stats = collect_project_stats(vault_root)
     assert stats["empty"]["page_count"] == 0
     assert stats["empty"]["last_activity"] == "N/A"
+
+
+def test_git_commit_and_push_no_changes(tmp_path: Path, monkeypatch):
+    """변경 없으면 commit/push 모두 skip."""
+    from scripts.vault_sync import git_commit_and_push
+
+    mirror = tmp_path / "mirror"
+    mirror.mkdir()
+    subprocess.run(["git", "-C", str(mirror), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(mirror), "config", "user.email", "test@test.com"], check=True)
+    subprocess.run(["git", "-C", str(mirror), "config", "user.name", "Test"], check=True)
+    (mirror / "init.md").write_text("init")
+    subprocess.run(["git", "-C", str(mirror), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(mirror), "commit", "-m", "init", "-q"], check=True)
+
+    pushed = git_commit_and_push(mirror, message="x", push=False)
+    assert pushed is False  # 변경 없음
+
+
+def test_git_commit_creates_commit(tmp_path: Path):
+    from scripts.vault_sync import git_commit_and_push
+
+    mirror = tmp_path / "mirror"
+    mirror.mkdir()
+    subprocess.run(["git", "-C", str(mirror), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(mirror), "config", "user.email", "test@test.com"], check=True)
+    subprocess.run(["git", "-C", str(mirror), "config", "user.name", "Test"], check=True)
+
+    (mirror / "new.md").write_text("hello")
+    pushed = git_commit_and_push(mirror, message="vault sync test", push=False)
+    assert pushed is True
+    log = subprocess.run(
+        ["git", "-C", str(mirror), "log", "--oneline"],
+        capture_output=True, text=True,
+    )
+    assert "vault sync test" in log.stdout
+
+
+def test_meta_projects_skip_write_when_only_timestamp_differs(tmp_path: Path):
+    """generated_at 만 다르면 파일 미변경 (perpetual diff 방지)."""
+    from scripts.vault_sync import _write_meta_if_changed
+
+    path = tmp_path / "projects.md"
+    old = (
+        "---\n"
+        "auto_generated: true\n"
+        "generated_at: 2026-04-26T10:00:00\n"
+        "---\n"
+        "# Projects\n"
+    )
+    path.write_text(old, encoding="utf-8")
+    old_mtime = path.stat().st_mtime
+
+    new = (
+        "---\n"
+        "auto_generated: true\n"
+        "generated_at: 2026-04-27T11:00:00\n"  # 다른 timestamp
+        "---\n"
+        "# Projects\n"  # 동일 의미 내용
+    )
+    _write_meta_if_changed(path, new)
+
+    # 파일 미변경 확인
+    assert path.read_text(encoding="utf-8") == old  # 원본 유지
