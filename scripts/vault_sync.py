@@ -19,6 +19,8 @@ from pathlib import Path
 
 from scripts._vault_common import load_vault_config, find_vault_config
 
+STATUS_ICON = {"Active": "🟢 Active", "Maintenance": "🟡 Maintenance", "Dormant": "⚪ Dormant"}
+
 
 def should_exclude(rel_path: Path, patterns: list[str]) -> bool:
     """rel_path 가 exclude 패턴에 해당하면 True."""
@@ -63,11 +65,12 @@ def mirror_project(src: Path, dst: Path, exclude_patterns: list[str]) -> dict:
     return {"copied": len(src_files), "deleted": deleted}
 
 
-STATUS_ICON = {"Active": "🟢 Active", "Maintenance": "🟡 Maintenance", "Dormant": "⚪ Dormant"}
-
-
 def generate_meta_projects(vault_cfg: dict, project_stats: dict[str, dict]) -> str:
-    """vault.config.json 을 Dataview-readable markdown 으로 풀어냄."""
+    """vault.config.json 을 Dataview-readable markdown 으로 풀어냄.
+
+    Precondition: each project in vault_cfg["projects"] MUST have a non-empty "id" field
+    (validated upstream by vault_join). Other fields default sensibly when missing.
+    """
     lines = [
         "---",
         "auto_generated: true",
@@ -81,6 +84,7 @@ def generate_meta_projects(vault_cfg: dict, project_stats: dict[str, dict]) -> s
     for proj in vault_cfg.get("projects", []):
         pid = proj["id"]
         stats = project_stats.get(pid, {})
+        # Unknown status → render plain text (no icon); missing key → "Active" default
         status_display = STATUS_ICON.get(proj.get("status", "Active"), proj.get("status", ""))
         lines.append(f"## {pid}")
         lines.append(f"- name:: {proj.get('name', pid)}")
