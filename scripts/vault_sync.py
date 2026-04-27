@@ -197,6 +197,19 @@ def run(
             print(f"  ✓ {kind}/{pid}: copied={stats['copied']} deleted={stats['deleted']}")
 
     if not dry_run:
+        # Orphan cleanup — 등록 해제된 프로젝트의 mirror 잔재 제거
+        # NOTE: cfg.get("projects", []) — UNFILTERED list (project_filter 무시).
+        # 그래야 --project p2 sync 후에도 leave 된 p1 mirror 가 청소됨.
+        active_ids = {p["id"] for p in cfg.get("projects", [])}
+        for kind in ("projects", "handovers", "session_archive"):
+            kind_dir = mirror_root / kind
+            if not kind_dir.exists():
+                continue
+            for child in kind_dir.iterdir():
+                if child.is_dir() and child.name not in active_ids:
+                    shutil.rmtree(child)
+                    print(f"  ✓ removed orphan mirror: {kind}/{child.name}")
+
         # _meta/projects.md 자동 생성
         project_stats = collect_project_stats(vault_root)
         meta_md = generate_meta_projects(cfg, project_stats)
