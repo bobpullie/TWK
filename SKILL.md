@@ -1,5 +1,6 @@
 ---
 name: TWK
+version: "0.4.0"
 upstream: https://github.com/bobpullie/TWK
 update_cmd: git -C "$HOME/.claude/skills/TWK" pull origin main
 description: >
