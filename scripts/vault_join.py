@@ -235,6 +235,9 @@ def run(
     description = description or ""
     tags = tags or []
 
+    # TODO(T17): if session_end_hook calls run() programmatically, expose
+    # quiet=False parameter and route prints through a _say() helper.
+    # For CLI use the prints are intentional (user feedback).
     print(f"\n[Plan]")
     print(f"  project: {pid} ({name})")
     print(f"  root: {project_root}")
@@ -284,6 +287,8 @@ def main() -> None:
     args = p.parse_args()
 
     vault_root = args.vault_root
+    if args.vault_id and not vault_root:
+        print(f"WARN: --vault-id={args.vault_id} ignored (auto-discovery not implemented)", file=sys.stderr)
     if not vault_root:
         # 현재 cwd 의 부모로 탐색하지 않음 — 대신 ~/.claude/twk_vaults.json 등 별도 메커니즘 가능
         # MVP: --vault-root 강제
