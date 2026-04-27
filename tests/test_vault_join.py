@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -158,3 +159,22 @@ def test_apply_join_rollback_on_error(initialized_vault: Path, fake_project: Pat
     assert "vault_membership" not in wcfg  # wiki.config 원복
     assert not (initialized_vault / "projects" / "fake").exists()  # 부분 junction 제거
     assert not (initialized_vault / "handovers" / "fake").exists()  # 2nd 호출 실패 — 애초에 생성 안 됨
+
+
+def test_cli_explicit_mode(initialized_vault: Path, fake_project: Path):
+    import os
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.vault_join",
+         "--vault-root", str(initialized_vault),
+         "--project-root", str(fake_project),
+         "--project-id", "fake",
+         "--name", "Fake Agent",
+         "--description", "Test",
+         "--status", "Active",
+         "--yes"],
+        capture_output=True, text=True, encoding="utf-8", env=env,
+        cwd=str(Path(__file__).resolve().parent.parent),
+    )
+    assert result.returncode == 0, result.stderr
+    assert "✓" in result.stdout or "joined" in result.stdout.lower()

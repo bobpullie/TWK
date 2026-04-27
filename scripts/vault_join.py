@@ -183,3 +183,127 @@ def apply_join(
             except JunctionError:
                 pass
         raise JoinError(f"join failed, rolled back: {e}") from e
+
+
+def detect_paths(project_root: Path, wcfg: dict) -> dict:
+    """wiki.config.json 의 paths + 기본값으로 4개 폴더 경로 자동 탐지."""
+    paths = wcfg.get("paths", {})
+    return {
+        "wiki_path": paths.get("wiki_root", "docs/wiki"),
+        "handover_path": "handover_doc" if (project_root / "handover_doc").exists() else None,
+        "session_archive_path": (
+            "docs/session_archive"
+            if (project_root / "docs" / "session_archive").exists() else None
+        ),
+        "recap_path": (
+            "qmd_drive/recaps"
+            if (project_root / "qmd_drive" / "recaps").exists() else None
+        ),
+    }
+
+
+def run(
+    vault_root: Path,
+    project_root: Path,
+    project_id: str | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    status: str = "Active",
+    tags: list[str] | None = None,
+    interactive: bool = False,
+    yes: bool = False,
+    dry_run: bool = False,
+) -> None:
+    from datetime import date
+
+    wcfg = load_wiki_config(project_root)
+    pid = project_id or wcfg.get("project_id")
+    if not pid:
+        print("ERROR: --project-id required", file=sys.stderr)
+        sys.exit(2)
+
+    paths = detect_paths(project_root, wcfg)
+
+    if interactive:
+        description = description or input(f"description for {pid}: ").strip()
+        name = name or input(f"display name [{pid}]: ").strip() or pid
+        if not tags:
+            tags_in = input("tags (comma-separated): ").strip()
+            tags = [t.strip() for t in tags_in.split(",") if t.strip()]
+
+    name = name or pid
+    description = description or ""
+    tags = tags or []
+
+    print(f"\n[Plan]")
+    print(f"  project: {pid} ({name})")
+    print(f"  root: {project_root}")
+    print(f"  paths: {paths}")
+    print(f"  vault_root: {vault_root}\n")
+
+    if dry_run:
+        print("(dry-run — no changes)")
+        return
+
+    if not yes:
+        ans = input("Proceed? [y/N]: ").strip().lower()
+        if ans != "y":
+            print("aborted")
+            sys.exit(1)
+
+    apply_join(
+        vault_root=vault_root,
+        project_root=project_root,
+        project_id=pid,
+        name=name,
+        description=description,
+        wiki_path=paths["wiki_path"],
+        handover_path=paths["handover_path"],
+        session_archive_path=paths["session_archive_path"],
+        recap_path=paths["recap_path"],
+        status=status,
+        tags=tags,
+        joined_at=date.today(),
+    )
+    print(f"✓ joined {pid} → {vault_root}")
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--vault-root", type=Path, help="(생략 시 자동 탐색)")
+    p.add_argument("--vault-id", help="(--vault-root 미지정 시 vault_id 로 탐색 — 미구현, --vault-root 사용 권장)")
+    p.add_argument("--project-root", type=Path, default=Path.cwd())
+    p.add_argument("--project-id")
+    p.add_argument("--name")
+    p.add_argument("--description")
+    p.add_argument("--status", default="Active")
+    p.add_argument("--tags", help="comma-separated")
+    p.add_argument("--interactive", action="store_true")
+    p.add_argument("--yes", "-y", action="store_true")
+    p.add_argument("--dry-run", action="store_true")
+    args = p.parse_args()
+
+    vault_root = args.vault_root
+    if not vault_root:
+        # 현재 cwd 의 부모로 탐색하지 않음 — 대신 ~/.claude/twk_vaults.json 등 별도 메커니즘 가능
+        # MVP: --vault-root 강제
+        print("ERROR: --vault-root is required (auto-discovery TODO)", file=sys.stderr)
+        sys.exit(2)
+
+    tags = [t.strip() for t in (args.tags or "").split(",") if t.strip()]
+    run(
+        vault_root=vault_root,
+        project_root=args.project_root,
+        project_id=args.project_id,
+        name=args.name,
+        description=args.description,
+        status=args.status,
+        tags=tags,
+        interactive=args.interactive,
+        yes=args.yes,
+        dry_run=args.dry_run,
+    )
+
+
+if __name__ == "__main__":
+    main()
