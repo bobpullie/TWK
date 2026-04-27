@@ -61,3 +61,53 @@ def mirror_project(src: Path, dst: Path, exclude_patterns: list[str]) -> dict:
             deleted += 1
 
     return {"copied": len(src_files), "deleted": deleted}
+
+
+STATUS_ICON = {"Active": "🟢 Active", "Maintenance": "🟡 Maintenance", "Dormant": "⚪ Dormant"}
+
+
+def generate_meta_projects(vault_cfg: dict, project_stats: dict[str, dict]) -> str:
+    """vault.config.json 을 Dataview-readable markdown 으로 풀어냄."""
+    lines = [
+        "---",
+        "auto_generated: true",
+        "generated_by: vault_sync.py",
+        f"generated_at: {datetime.now().isoformat(timespec='seconds')}",
+        "---",
+        "",
+        "# Projects (auto-generated, do not edit)",
+        "",
+    ]
+    for proj in vault_cfg.get("projects", []):
+        pid = proj["id"]
+        stats = project_stats.get(pid, {})
+        status_display = STATUS_ICON.get(proj.get("status", "Active"), proj.get("status", ""))
+        lines.append(f"## {pid}")
+        lines.append(f"- name:: {proj.get('name', pid)}")
+        lines.append(f"- project_id:: {pid}")
+        lines.append(f"- description:: {proj.get('description', '')}")
+        lines.append(f"- status:: {status_display}")
+        lines.append(f"- last_activity:: {stats.get('last_activity', 'N/A')}")
+        lines.append(f"- page_count:: {stats.get('page_count', 0)}")
+        lines.append(f"- joined_at:: {proj.get('joined_at', '')}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def collect_project_stats(vault_root: Path) -> dict[str, dict]:
+    """junction 을 따라 각 프로젝트의 page_count + last_activity 수집."""
+    projects_dir = vault_root / "projects"
+    stats = {}
+    for proj_dir in projects_dir.iterdir():
+        if not proj_dir.is_dir():
+            continue
+        pid = proj_dir.name
+        md_files = list(proj_dir.rglob("*.md"))
+        page_count = len(md_files)
+        last_mtime = max((p.stat().st_mtime for p in md_files), default=0)
+        last_activity = (
+            datetime.fromtimestamp(last_mtime).date().isoformat()
+            if last_mtime else "N/A"
+        )
+        stats[pid] = {"page_count": page_count, "last_activity": last_activity}
+    return stats

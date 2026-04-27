@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from scripts.vault_sync import mirror_project, should_exclude
-from scripts._vault_common import load_vault_config
+from datetime import date
+
+from scripts.vault_sync import mirror_project, should_exclude, generate_meta_projects
 
 
 def test_should_exclude_workspace_json():
@@ -39,3 +40,26 @@ def test_mirror_project_deletes_extras(tmp_path: Path):
 
     assert not (dst / "stale.md").exists()
     assert (dst / "keep.md").read_text() == "keep"
+
+
+def test_generate_meta_projects(tmp_path: Path):
+    cfg = {
+        "version": "0.4",
+        "vault_id": "x",
+        "projects": [
+            {
+                "id": "wesang",
+                "name": "DnT 위상군",
+                "description": "Topological Systems Architect",
+                "status": "Active",
+                "joined_at": "2026-04-26",
+            },
+        ],
+    }
+    project_stats = {"wesang": {"page_count": 27, "last_activity": "2026-04-22"}}
+    output = generate_meta_projects(cfg, project_stats)
+    assert "## wesang" in output
+    assert "name:: DnT 위상군" in output
+    assert "page_count:: 27" in output
+    assert "last_activity:: 2026-04-22" in output
+    assert "status:: 🟢 Active" in output  # 이모지 변환
