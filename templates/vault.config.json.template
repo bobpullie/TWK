@@ -1,0 +1,23 @@
+{
+  "version": "0.4",
+  "vault_id": "{{VAULT_ID}}",
+  "vault_root": "{{VAULT_ROOT}}",
+  "mirror_root": "{{MIRROR_ROOT}}",
+  "mirror_remote": "{{MIRROR_REMOTE}}",
+  "auth": {
+    "mobile_url": "{{MOBILE_URL}}",
+    "provider": "cloudflare-access",
+    "allowed_emails": ["{{ALLOWED_EMAIL}}"]
+  },
+  "projects": [],
+  "sync": {
+    "trigger": "session_end + manual",
+    "exclude_patterns": [
+      ".obsidian/workspace.json",
+      ".obsidian/workspace-mobile.json",
+      "*.tmp",
+      "__pycache__",
+      ".DS_Store"
+    ]
+  }
+}

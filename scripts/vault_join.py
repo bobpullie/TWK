@@ -1,0 +1,314 @@
+"""프로젝트를 메타 vault 에 합류시킨다.
+
+Usage (대화형):  python vault_join.py
+Usage (명시):    python vault_join.py --project-root E:/MyAgent --project-id myagent --description "..."
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import date as DateType
+from pathlib import Path
+
+from scripts._vault_common import (
+    load_vault_config, load_wiki_config, save_vault_config, save_wiki_config,
+    find_vault_config,
+    VAULT_CONFIG_NAME, WIKI_CONFIG_NAME,
+)
+# create_junction is imported by name so tests can monkeypatch scripts.vault_join.create_junction
+from scripts._vault_junction import create_junction, remove_junction, JunctionError
+
+
+class JoinValidationError(Exception):
+    """vault_join 사전 검증 실패."""
+
+
+class JoinError(Exception):
+    """vault_join 적용 실패."""
+
+
+def assert_project_has_wiki_config(project_root: Path) -> None:
+    if not (project_root / WIKI_CONFIG_NAME).exists():
+        raise JoinValidationError(
+            f"{WIKI_CONFIG_NAME} not found at {project_root} — run init_wiki.py first"
+        )
+
+
+def assert_no_duplicate_id(vault_root: Path, project_id: str) -> None:
+    cfg = load_vault_config(vault_root)
+    existing_ids = {p.get("id") for p in cfg.get("projects", [])}
+    if project_id in existing_ids:
+        raise JoinValidationError(f"duplicate project_id: {project_id}")
+
+
+def assert_no_existing_junction(vault_root: Path, project_id: str) -> None:
+    target = vault_root / "projects" / project_id
+    if target.exists():
+        raise JoinValidationError(f"junction target already exists: {target}")
+
+
+def build_wiki_config_patch(vault_id: str, joined_at: DateType) -> dict:
+    return {
+        "vault_membership": {
+            "vault_id": vault_id,
+            "joined_at": joined_at.isoformat(),
+        }
+    }
+
+
+def build_vault_config_patch(
+    project_id: str,
+    name: str,
+    description: str,
+    project_root: Path,
+    wiki_path: str,
+    handover_path: str | None,
+    session_archive_path: str | None,
+    recap_path: str | None,
+    status: str,
+    tags: list[str],
+    joined_at: DateType,
+) -> dict:
+    entry = {
+        "id": project_id,
+        "name": name,
+        "description": description,
+        "root": project_root.as_posix(),  # Windows 경로 구분자 정규화 (T5/T8 lesson)
+        "wiki_path": wiki_path,
+        "status": status,
+        "tags": tags,
+        "joined_at": joined_at.isoformat(),
+    }
+    if handover_path:
+        entry["handover_path"] = handover_path
+    if session_archive_path:
+        entry["session_archive_path"] = session_archive_path
+    if recap_path:
+        entry["recap_path"] = recap_path
+    return entry
+
+
+def plan_junctions(
+    vault_root: Path,
+    project_root: Path,
+    project_id: str,
+    wiki_path: str,
+    handover_path: str | None,
+    session_archive_path: str | None,
+    recap_path: str | None,
+) -> list[tuple[Path, Path]]:
+    """반환: [(link_path, target_path), ...]"""
+    plans = []
+    plans.append((vault_root / "projects" / project_id, project_root / wiki_path))
+    if handover_path and (project_root / handover_path).exists():
+        plans.append((vault_root / "handovers" / project_id, project_root / handover_path))
+    if session_archive_path and (project_root / session_archive_path).exists():
+        plans.append((vault_root / "session_archive" / project_id, project_root / session_archive_path))
+    if recap_path and (project_root / recap_path).exists():
+        # recap 은 vault 에 포함하지 않음 (각 프로젝트 로컬 — TCL #116)
+        pass
+    return plans
+
+
+def apply_join(
+    vault_root: Path,
+    project_root: Path,
+    project_id: str,
+    name: str,
+    description: str,
+    wiki_path: str,
+    handover_path: str | None,
+    session_archive_path: str | None,
+    recap_path: str | None,
+    status: str,
+    tags: list[str],
+    joined_at: DateType,
+) -> None:
+    """프로젝트를 메타 vault 에 합류 — 트랜잭션 (실패 시 전체 원복).
+
+    1) 사전 검증 → 2) wcfg/vcfg 백업 → 3) wcfg 패치 + vcfg append + junction 생성.
+    실패 시 wcfg/vcfg 원복 + 생성된 junction 제거.
+
+    Raises:
+        JoinValidationError: 사전 검증 실패 (입력 오류, 상태 무변경).
+        JoinError: 적용 도중 실패 (전체 원복 후 재발 — 환경 점검 필요).
+
+    Note:
+        rollback 은 configs 와 created junctions 만 원복.
+        mkdir 로 생성된 빈 부모 디렉토리(예: vault_root/handovers/)는 청소하지 않음.
+    """
+    # 사전 검증 (실패 시 JoinValidationError — try 블록 밖)
+    assert_project_has_wiki_config(project_root)
+    assert_no_duplicate_id(vault_root, project_id)
+    assert_no_existing_junction(vault_root, project_id)
+
+    # 패치 준비 — deep copy via JSON round-trip
+    wcfg = load_wiki_config(project_root)
+    vcfg = load_vault_config(vault_root)
+    wcfg_backup = json.loads(json.dumps(wcfg))
+    vcfg_backup = json.loads(json.dumps(vcfg))
+
+    vault_id = vcfg["vault_id"]
+    wiki_patch = build_wiki_config_patch(vault_id, joined_at)
+    vault_entry = build_vault_config_patch(
+        project_id, name, description, project_root,
+        wiki_path, handover_path, session_archive_path, recap_path,
+        status, tags, joined_at,
+    )
+    junctions = plan_junctions(
+        vault_root, project_root, project_id,
+        wiki_path, handover_path, session_archive_path, recap_path,
+    )
+
+    created_junctions: list[Path] = []
+    try:
+        wcfg_new = {**wcfg, **wiki_patch}
+        save_wiki_config(project_root, wcfg_new)
+
+        vcfg_new = {**vcfg, "projects": vcfg["projects"] + [vault_entry]}
+        save_vault_config(vault_root, vcfg_new)
+
+        for link, target in junctions:
+            create_junction(link, target)
+            created_junctions.append(link)
+
+    except (JunctionError, OSError) as e:
+        # 롤백 — config 원복 후 부분 생성된 junction 제거
+        save_wiki_config(project_root, wcfg_backup)
+        save_vault_config(vault_root, vcfg_backup)
+        for link in created_junctions:
+            try:
+                remove_junction(link)
+            except JunctionError:
+                pass
+        raise JoinError(f"join failed, rolled back: {e}") from e
+
+
+def detect_paths(project_root: Path, wcfg: dict) -> dict:
+    """wiki.config.json 의 paths + 기본값으로 4개 폴더 경로 자동 탐지."""
+    paths = wcfg.get("paths", {})
+    return {
+        "wiki_path": paths.get("wiki_root", "docs/wiki"),
+        "handover_path": "handover_doc" if (project_root / "handover_doc").exists() else None,
+        "session_archive_path": (
+            "docs/session_archive"
+            if (project_root / "docs" / "session_archive").exists() else None
+        ),
+        "recap_path": (
+            "qmd_drive/recaps"
+            if (project_root / "qmd_drive" / "recaps").exists() else None
+        ),
+    }
+
+
+def run(
+    vault_root: Path,
+    project_root: Path,
+    project_id: str | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    status: str = "Active",
+    tags: list[str] | None = None,
+    interactive: bool = False,
+    yes: bool = False,
+    dry_run: bool = False,
+) -> None:
+    from datetime import date
+
+    wcfg = load_wiki_config(project_root)
+    pid = project_id or wcfg.get("project_id")
+    if not pid:
+        print("ERROR: --project-id required", file=sys.stderr)
+        sys.exit(2)
+
+    paths = detect_paths(project_root, wcfg)
+
+    if interactive:
+        description = description or input(f"description for {pid}: ").strip()
+        name = name or input(f"display name [{pid}]: ").strip() or pid
+        if not tags:
+            tags_in = input("tags (comma-separated): ").strip()
+            tags = [t.strip() for t in tags_in.split(",") if t.strip()]
+
+    name = name or pid
+    description = description or ""
+    tags = tags or []
+
+    # TODO(T17): if session_end_hook calls run() programmatically, expose
+    # quiet=False parameter and route prints through a _say() helper.
+    # For CLI use the prints are intentional (user feedback).
+    print(f"\n[Plan]")
+    print(f"  project: {pid} ({name})")
+    print(f"  root: {project_root}")
+    print(f"  paths: {paths}")
+    print(f"  vault_root: {vault_root}\n")
+
+    if dry_run:
+        print("(dry-run — no changes)")
+        return
+
+    if not yes:
+        ans = input("Proceed? [y/N]: ").strip().lower()
+        if ans != "y":
+            print("aborted")
+            sys.exit(1)
+
+    apply_join(
+        vault_root=vault_root,
+        project_root=project_root,
+        project_id=pid,
+        name=name,
+        description=description,
+        wiki_path=paths["wiki_path"],
+        handover_path=paths["handover_path"],
+        session_archive_path=paths["session_archive_path"],
+        recap_path=paths["recap_path"],
+        status=status,
+        tags=tags,
+        joined_at=date.today(),
+    )
+    print(f"✓ joined {pid} → {vault_root}")
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--vault-root", type=Path, help="(생략 시 자동 탐색)")
+    p.add_argument("--vault-id", help="(--vault-root 미지정 시 vault_id 로 탐색 — 미구현, --vault-root 사용 권장)")
+    p.add_argument("--project-root", type=Path, default=Path.cwd())
+    p.add_argument("--project-id")
+    p.add_argument("--name")
+    p.add_argument("--description")
+    p.add_argument("--status", default="Active")
+    p.add_argument("--tags", help="comma-separated")
+    p.add_argument("--interactive", action="store_true")
+    p.add_argument("--yes", "-y", action="store_true")
+    p.add_argument("--dry-run", action="store_true")
+    args = p.parse_args()
+
+    vault_root = args.vault_root
+    if args.vault_id and not vault_root:
+        print(f"WARN: --vault-id={args.vault_id} ignored (auto-discovery not implemented)", file=sys.stderr)
+    if not vault_root:
+        # 현재 cwd 의 부모로 탐색하지 않음 — 대신 ~/.claude/twk_vaults.json 등 별도 메커니즘 가능
+        # MVP: --vault-root 강제
+        print("ERROR: --vault-root is required (auto-discovery TODO)", file=sys.stderr)
+        sys.exit(2)
+
+    tags = [t.strip() for t in (args.tags or "").split(",") if t.strip()]
+    run(
+        vault_root=vault_root,
+        project_root=args.project_root,
+        project_id=args.project_id,
+        name=args.name,
+        description=args.description,
+        status=args.status,
+        tags=tags,
+        interactive=args.interactive,
+        yes=args.yes,
+        dry_run=args.dry_run,
+    )
+
+
+if __name__ == "__main__":
+    main()
