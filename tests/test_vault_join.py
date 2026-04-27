@@ -1,3 +1,5 @@
+import json
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -11,8 +13,10 @@ from scripts.vault_join import (
     build_vault_config_patch,
     plan_junctions,
     JoinValidationError,
+    apply_join,
+    JoinError,
 )
-from scripts._vault_common import save_vault_config
+from scripts._vault_common import load_vault_config, load_wiki_config, save_vault_config
 
 
 def test_assert_wiki_config_present(fake_project: Path):
@@ -92,3 +96,64 @@ def test_plan_junctions(initialized_vault: Path, fake_project: Path):
     assert ("fake", "wiki") in targets  # projects/fake → docs/wiki
     assert ("fake", "handover_doc") in targets  # handovers/fake → handover_doc
     assert len(plans) == 2  # session_archive/recap 없음
+
+
+def test_apply_join_success(initialized_vault: Path, fake_project: Path):
+    apply_join(
+        vault_root=initialized_vault,
+        project_root=fake_project,
+        project_id="fake",
+        name="Fake Agent",
+        description="Test",
+        wiki_path="docs/wiki",
+        handover_path="handover_doc",
+        session_archive_path=None,
+        recap_path=None,
+        status="Active",
+        tags=["test"],
+        joined_at=date(2026, 4, 27),
+    )
+    # vault.config.json 갱신
+    vcfg = load_vault_config(initialized_vault)
+    assert len(vcfg["projects"]) == 1
+    assert vcfg["projects"][0]["id"] == "fake"
+    # wiki.config.json 갱신
+    wcfg = load_wiki_config(fake_project)
+    assert wcfg["vault_membership"]["vault_id"] == "test-vault"
+    # Junction 생성
+    assert (initialized_vault / "projects" / "fake").exists()
+    assert (initialized_vault / "handovers" / "fake").exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="junction rollback")
+def test_apply_join_rollback_on_error(initialized_vault: Path, fake_project: Path, monkeypatch):
+    """Junction 생성 도중 실패 시 vault.config / wiki.config / 부분 junction 모두 원복."""
+    from scripts import _vault_junction
+
+    call_count = {"n": 0}
+    original_create = _vault_junction.create_junction
+
+    def failing_create(link, target):
+        call_count["n"] += 1
+        if call_count["n"] == 2:
+            raise _vault_junction.JunctionError("simulated failure")
+        return original_create(link, target)
+
+    monkeypatch.setattr("scripts.vault_join.create_junction", failing_create)
+
+    with pytest.raises(JoinError):
+        apply_join(
+            vault_root=initialized_vault,
+            project_root=fake_project,
+            project_id="fake",
+            name="Fake", description="x",
+            wiki_path="docs/wiki", handover_path="handover_doc",
+            session_archive_path=None, recap_path=None,
+            status="Active", tags=[], joined_at=date(2026, 4, 27),
+        )
+    # 롤백 확인
+    vcfg = load_vault_config(initialized_vault)
+    assert vcfg["projects"] == []  # vault.config 원복
+    wcfg = load_wiki_config(fake_project)
+    assert "vault_membership" not in wcfg  # wiki.config 원복
+    assert not (initialized_vault / "projects" / "fake").exists()  # 부분 junction 제거

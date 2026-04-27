@@ -6,18 +6,25 @@ Usage (명시):    python vault_join.py --project-root E:/MyAgent --project-id m
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import date as DateType
 from pathlib import Path
 
 from scripts._vault_common import (
-    load_vault_config, load_wiki_config, find_vault_config,
+    load_vault_config, load_wiki_config, save_vault_config, save_wiki_config,
+    find_vault_config,
     VAULT_CONFIG_NAME, WIKI_CONFIG_NAME,
 )
+from scripts._vault_junction import create_junction, remove_junction, JunctionError
 
 
 class JoinValidationError(Exception):
     """vault_join 사전 검증 실패."""
+
+
+class JoinError(Exception):
+    """vault_join 적용 실패."""
 
 
 def assert_project_has_wiki_config(project_root: Path) -> None:
@@ -101,3 +108,65 @@ def plan_junctions(
         # recap 은 vault 에 포함하지 않음 (각 프로젝트 로컬 — TCL #116)
         pass
     return plans
+
+
+def apply_join(
+    vault_root: Path,
+    project_root: Path,
+    project_id: str,
+    name: str,
+    description: str,
+    wiki_path: str,
+    handover_path: str | None,
+    session_archive_path: str | None,
+    recap_path: str | None,
+    status: str,
+    tags: list[str],
+    joined_at: DateType,
+) -> None:
+    """프로젝트를 vault 에 합류시킨다 — 트랜잭션 의미론 (실패 시 전체 원복)."""
+    # 사전 검증 (실패 시 JoinValidationError — try 블록 밖)
+    assert_project_has_wiki_config(project_root)
+    assert_no_duplicate_id(vault_root, project_id)
+    assert_no_existing_junction(vault_root, project_id)
+
+    # 패치 준비 — deep copy via JSON round-trip
+    wcfg = load_wiki_config(project_root)
+    vcfg = load_vault_config(vault_root)
+    wcfg_backup = json.loads(json.dumps(wcfg))
+    vcfg_backup = json.loads(json.dumps(vcfg))
+
+    vault_id = vcfg["vault_id"]
+    wiki_patch = build_wiki_config_patch(vault_id, joined_at)
+    vault_entry = build_vault_config_patch(
+        project_id, name, description, project_root,
+        wiki_path, handover_path, session_archive_path, recap_path,
+        status, tags, joined_at,
+    )
+    junctions = plan_junctions(
+        vault_root, project_root, project_id,
+        wiki_path, handover_path, session_archive_path, recap_path,
+    )
+
+    created_junctions: list[Path] = []
+    try:
+        wcfg_new = {**wcfg, **wiki_patch}
+        save_wiki_config(project_root, wcfg_new)
+
+        vcfg_new = {**vcfg, "projects": vcfg["projects"] + [vault_entry]}
+        save_vault_config(vault_root, vcfg_new)
+
+        for link, target in junctions:
+            create_junction(link, target)
+            created_junctions.append(link)
+
+    except (JunctionError, OSError) as e:
+        # 롤백 — config 원복 후 부분 생성된 junction 제거
+        save_wiki_config(project_root, wcfg_backup)
+        save_vault_config(vault_root, vcfg_backup)
+        for link in created_junctions:
+            try:
+                remove_junction(link)
+            except JunctionError:
+                pass
+        raise JoinError(f"join failed, rolled back: {e}") from e
