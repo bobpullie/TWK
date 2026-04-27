@@ -48,10 +48,10 @@ def run(project_root: Path, vault_root: Path | None = None, auto: bool = False) 
     """returns: exit code"""
     # Step 1: normalize (있으면)
     normalize_script = SKILL_ROOT / "scripts" / "normalize_session_frontmatter.py"
-    if normalize_script.exists() and (project_root / "wiki.config.json").exists():
+    if normalize_script.exists() and (project_root / WIKI_CONFIG_NAME).exists():
         result = subprocess.run(
             [sys.executable, str(normalize_script), "--apply", "--config",
-             str(project_root / "wiki.config.json")],
+             str(project_root / WIKI_CONFIG_NAME)],
             cwd=str(project_root),
         )
         if result.returncode != 0:
