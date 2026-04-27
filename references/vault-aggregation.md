@@ -42,4 +42,10 @@
 
 ## Edge Cases
 
-(구현 시 채움 — Task 21 에서 보강)
+| 케이스 | 처리 |
+|--------|------|
+| `wiki.config.json` 없음 | `vault_join.py` 가 `init_wiki.py` 먼저 실행 안내 |
+| `docs/wiki/` 폴더 없음 | 자동 생성 + 빈 index.md 시드 (v0.5 예정, 현재는 수동 생성 안내) |
+| `project_id` 중복 | `JoinValidationError` raise, 충돌 정보 표시 |
+| Junction 대상 이미 존재 | abort, 기존 폴더 수동 정리 후 재시도 |
+| Windows junction 권한 부족 | 관리자 권한 또는 개발자 모드 활성화 |

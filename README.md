@@ -79,6 +79,20 @@ python ~/.claude/skills/TWK/scripts/init_wiki.py --mode B  # Mode A=Pure, B=Sess
 | **DVC** | Deterministic Verification Checklist (skill) | https://github.com/bobpullie/DVC |
 | **TWK** (this) | LLM Wiki 3-Layer 방법론 (skill) | https://github.com/bobpullie/TWK |
 
+## Vault Aggregator (v0.4+)
+
+여러 프로젝트의 TWK 위키를 단일 통합 Obsidian Vault 로 묶고 GitHub mirror (`bobpullie/KJI_WIKI`) 에 자동 동기화.
+
+- `vault_init.py` — 메타 vault 초기화
+- `vault_join.py` — 프로젝트 합류 (junction 자동 생성)
+- `vault_leave.py` — 프로젝트 제거 (원본 무영향)
+- `vault_sync.py` — junction → mirror 복사 + git push
+- `vault_status.py` — 상태 점검
+- `vault_discover.py` — 미가입 프로젝트 탐색
+- `session_end_hook.py` — 세션 종료 통합 (normalize + sync)
+
+상세 매뉴얼: `references/vault-aggregation.md`
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

@@ -3,9 +3,8 @@ name: TWK
 upstream: https://github.com/bobpullie/TWK
 update_cmd: git -C "$HOME/.claude/skills/TWK" pull origin main
 description: >
-  TriadWiKi (TWK) — Karpathy LLM Wiki 방법론 Triad Chord Studio 전용 구현체 (구 llm-wiki). 3-Layer (Raw / Wiki / Schema) +
-  3 Operations (Ingest / Query / Lint) + Compilation > RAG 원칙.
-  에이전트별 도메인 특화는 wiki.config.json으로 분리; 핵심 원칙·템플릿·스크립트는 공통 자산.
+  TriadWiKi (TWK) — Karpathy LLM Wiki 방법론 Triad Chord Studio 전용 구현체. 3-Layer + 3 Operations.
+  v0.4+ vault aggregator: 여러 프로젝트의 위키를 단일 통합 Obsidian Vault 로 묶고 GitHub mirror 로 모바일 배포.
 triggers:
   - "wiki ingest"
   - "wiki query"
@@ -16,6 +15,12 @@ triggers:
   - "session artifacts"
   - "세션 산출물 인덱스"
   - "normalize_session_frontmatter"
+  - "vault join"
+  - "vault sync"
+  - "vault status"
+  - "통합 vault"
+  - "메타 vault"
+  - "KJI_WIKI"
 ---
 
 # TriadWiKi (TWK) Skill
@@ -34,6 +39,9 @@ triggers:
 | wiki 건강도 점검 (모순/stale/고아 탐지) 시 | "wiki lint", 주기 자동 |
 | 세션 종료 시 L2 archive + L3 wiki 갱신 시 | session-lifecycle Step N |
 | 세션 산출물(L2+handover+recap+L3) frontmatter 자동 정규화 + 통합 타임라인 | `normalize_session_frontmatter.py --apply` (lifecycle step) |
+| 여러 프로젝트 위키를 통합 Vault 로 묶기 | "vault join", "통합 vault" |
+| 통합 Vault 를 GitHub mirror 로 push | "vault sync" |
+| 등록된 프로젝트 상태 점검 | "vault status" |
 
 ---
 
@@ -261,3 +269,21 @@ python ~/.claude/skills/TWK/scripts/lint.py \
 | [`references/operations.md`](references/operations.md) | Ingest/Query/Lint 상세 절차 |
 | [`references/obsidian-integration.md`](references/obsidian-integration.md) | wikilink/backlink/Dataview/QMD 연동 |
 | [`references/project-integration.md`](references/project-integration.md) | 리얼군·코드군 케이스 스터디 + 결정 가이드 |
+| [`references/vault-aggregation.md`](references/vault-aggregation.md) | v0.4+ 멀티 vault 통합 설계 + Edge Cases |
+
+---
+
+## v0.4+ Vault Aggregator
+
+여러 TWK 프로젝트를 단일 통합 Obsidian Vault 로 묶는 모듈. 상세는 `references/vault-aggregation.md` 참조.
+
+```bash
+# 메타 vault 초기화
+python -m scripts.vault_init --vault-id <id> --vault-root <path> ...
+
+# 프로젝트 합류
+python -m scripts.vault_join --vault-root <path> --project-root <path>
+
+# Sync
+python -m scripts.vault_sync
+```
