@@ -207,8 +207,12 @@ def run(
                 continue
             for child in kind_dir.iterdir():
                 if child.is_dir() and child.name not in active_ids:
-                    shutil.rmtree(child)
-                    print(f"  ✓ removed orphan mirror: {kind}/{child.name}")
+                    try:
+                        shutil.rmtree(child)
+                        print(f"  ✓ removed orphan mirror: {kind}/{child.name}")
+                    except OSError as e:
+                        print(f"  WARN: failed to remove orphan {kind}/{child.name}: {e}",
+                              file=sys.stderr)
 
         # _meta/projects.md 자동 생성
         project_stats = collect_project_stats(vault_root)

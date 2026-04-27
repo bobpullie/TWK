@@ -88,3 +88,12 @@ def test_full_lifecycle(tmp_path: Path):
     vault_sync_run(vault_root=vault, push=False)
     assert not (mirror / "projects/p1").exists()
     assert (mirror / "projects/p2").exists()
+
+    # 7b. _meta/projects.md 도 p1 제거 반영
+    meta_after = (mirror / "_meta/projects.md").read_text(encoding="utf-8")
+    assert "## p1" not in meta_after
+    assert "## p2" in meta_after
+
+    # 7c. mirror 의 vault.config.json 도 leave 반영
+    mirror_cfg = json.loads((mirror / "vault.config.json").read_text(encoding="utf-8"))
+    assert {p["id"] for p in mirror_cfg["projects"]} == {"p2"}
