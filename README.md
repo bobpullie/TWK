@@ -4,6 +4,21 @@
 
 3-Layer (Raw / Wiki / Schema) + 3 Operations (Ingest / Query / Lint) + **Compilation > RAG** 원칙.
 
+---
+
+## 5-Asset 4 원칙 (Independence + Local-Only + Separate-Repo + Universal Portability)
+
+본 자산은 Triad Chord Studio 5-Asset 체계 (**TEMS / SDC / DVC / TWK / handover**) 의 한 축. 다음 4 게이트 원칙을 모두 만족해야 canonical GitHub 레포에 push 허용:
+
+1. **Independence** — 5자산 상호 의존 0. TWK 는 TEMS / SDC / DVC / handover 미설치 환경에서도 self-contained 작동.
+2. **Local-Only** — `docs/wiki/` 위키 본문 + `wiki.config.json` 은 각 프로젝트 로컬 한정. v0.4 vault aggregator 는 GitHub mirror 까지 지원하지만 mirror 자체도 사용자 프로젝트 한정.
+3. **Separate-Repo** — 각 자산 별도 canonical 레포 보유. 한 PR 에 두 레포 묶지 않음.
+4. **Universal Portability** — Windows/Linux/macOS, 임의 OS user, 임의 에이전트명 작동. 절대경로/특정 user-name/hub 의존 금지 — `~/.claude/skills/TWK/scripts/` 의 `Path(__file__)` 기반 해상.
+
+위반 발견 시 즉시 일반화 PR.
+
+---
+
 ## Install
 
 글로벌 Claude Code 스킬로 설치 (**clone 권장** — pull-based 업데이트 지원):
